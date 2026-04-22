@@ -1,5 +1,5 @@
 import spotipy
-import os
+import time
 import logging
 from dotenv import load_dotenv
 from spotipy.oauth2 import SpotifyOAuth
@@ -11,14 +11,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger()
 load_dotenv()
-TOKEN  = os.getenv('TOKEN')
+#TOKEN  = os.getenv('TOKEN')
 scope = "user-library-read user-library-modify"
+
+def on_code(code):
+    print(f'Откройте {code.verification_url} и введите код: {code.user_code}')
 
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
 
 track_ids = []
-chunk_size = 50
-client = Client(TOKEN).init()
+chunk_size = 1
+client = Client()
+token = client.device_auth(on_code=on_code)
+client.init()
+client.request.set_timeout(60)
 liked_tracks = client.users_likes_tracks()
 
 
@@ -35,10 +41,13 @@ for track in liked_tracks.tracks:
     else:
         logger.warning(f"This track was not found in Spotify: {artist} - {title_name}")
         continue
-    
+    time.sleep(0.5)
+
+  
 chunks = [track_ids[i:i + chunk_size] for i in range(0, len(track_ids), chunk_size)]
 
 for chunk in chunks[::-1]:
     save_track = sp.current_user_saved_tracks_add(tracks=chunk)
+    time.sleep(1)
 
 logger.info("Done")
